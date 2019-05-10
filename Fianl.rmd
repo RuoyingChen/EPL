@@ -1,0 +1,243 @@
+#extract data from espn
+#create dataframe of outfield players and goal keepers
+#merge two dataframe
+#calculate the average goals of starting lineup players
+```{r}
+library(rvest)
+library(xml2)
+library(stringr)
+library(tidyverse)
+library(dplyr)
+```
+#extract data from website
+```{r}
+spider <- function(team_url){
+    result = list()
+    goalkeepers_result = list()
+    outfield_players_result = list()
+
+    print(team_url)
+    html <- read_html(team_url)
+
+    team_name <- html_nodes(html, '.n2') %>% html_text()
+
+    tables <- html_nodes(html, xpath="//tbody[@class=\"Table2__tbody\"]")
+
+    goalkeepers <- html_nodes(tables[1], xpath="tr[@class=\"Table2__tr Table2__tr--sm Table2__even\"]")
+    
+    for(index in 1:length(goalkeepers)){
+
+        goalkeeper <- html_nodes(goalkeepers[index], xpath="td[@class=\"Table2__td\"]") %>% html_text()
+        
+        temp <- c(team_name, goalkeeper)
+        
+        goalkeepers_result[[index]] <- temp
+        
+    }
+
+    outfield_players <- html_nodes(tables[2], xpath="tr[@class=\"Table2__tr Table2__tr--sm Table2__even\"]")
+    for(index in 1:length(outfield_players)){
+
+        outfield_player <- html_nodes(outfield_players[index], xpath="td[@class=\"Table2__td\"]") %>% html_text()
+        
+        temp <- c(team_name, outfield_player)
+        
+        outfield_players_result[[index]] <- temp
+    }
+
+    result[[1]] <- goalkeepers_result
+    result[[2]] <- outfield_players_result
+    
+    return(result)
+}
+```
+#extract data for each team
+```{r}
+all_goalkeepers_data = list()
+all_outfield_players_data = list()
+
+base_team_url <- "http://www.espn.com/soccer/team/squad/_/id/"
+team_ids = c("349","359","331","379","347","363","383","368","370","335","375","364","382","360","361","376","367","395","371","380")
+
+all_team_url <- paste(base_team_url, team_ids, sep = "")
+
+for(team_url in all_team_url){
+    tryCatch(
+        {
+            
+            data <- spider(team_url)
+            
+            for (index in 1:length(data[[1]])){
+                all_goalkeepers_data[[1+length(all_goalkeepers_data)]] <- data[[1]][[index]]
+            }
+
+            for (index in 1:length(data[[2]])){
+                all_outfield_players_data[[1+length(all_outfield_players_data)]] <- data[[2]][[index]]
+            }
+        },
+        
+        error=function(e){
+            print("********")
+            cat(conditionMessage(e))
+        }
+    )
+}
+```
+#tranfer to dataframe
+```{r}
+goalkeepers_df <- data.frame(matrix(unlist(all_goalkeepers_data), nrow=length(all_goalkeepers_data), byrow=T))
+colnames(goalkeepers_df) <- c( 
+    "team", "player",
+    "POS", "AGE", "HT", "WT",
+    "NAT", "APP", "SUBIN",	"S",
+    "GC", "A", "FC", "FA",
+    "YC", "RC"
+)
+goalkeepers_df
+```
+#transfer to dataframe
+```{r}
+outfield_players_df <- data.frame(matrix(unlist(all_outfield_players_data), nrow=length(all_outfield_players_data), byrow=T))
+colnames(outfield_players_df) <- c( 
+    "team", "player",
+    "POS", "AGE", "HT", "WT",
+    "NAT", "APP", "SUBIN", "G",
+    "A", "SH", "ST", "FC",
+    "FA",  "YC", "RC"
+)
+outfield_players_df
+```
+#save as csv file
+```{r}
+soccer_df <- bind_rows(goalkeepers_df, outfield_players_df)
+write.csv(soccer_df, "soccer.csv")
+```
+
+
+# Load the data
+```{r}
+soccer <- read.csv("soccer.csv")
+```
+# Transfer the factor to numeric or character
+```{r}
+soccer[is.na(soccer)] <- 0
+soccer$APP[which(soccer$APP == "-")] <- 0
+soccer$APP <- as.numeric(as.character(soccer$APP))
+soccer$G[which(soccer$G == "-")] <- 0
+soccer$G[which(soccer$G == "#N/A")] <- 0
+soccer$G <- as.numeric(as.character(soccer$G))
+soccer$player <- as.character(soccer$player)
+```
+
+```{r}
+avg_g <- function(teamname){
+  sum = 0
+  for(i in 1:11){
+    G <- soccer$G[which(soccer$player == teamname[i])]
+    APP <- soccer$APP[which(soccer$player == teamname[i])]
+    temp <- G / APP
+    sum = sum + temp
+  }
+  final <- sum / 11
+  return(final)
+}
+```
+# Manually input each team's starting lineup players
+```{r}
+teamname_1 = c("Kepa Arrizabalaga1","David Luiz30","Andreas Christensen27","Marcos Alonso3","César Azpilicueta28","Jorginho5","Mateo Kovacic17","N'Golo Kanté7","Gonzalo Higuaín9","Eden Hazard10","Pedro11")
+final_1 <- avg_g(teamname_1)
+final_1
+teamname_2 = c("Ben Foster26","Craig Cathcart15","Adrian Mariappa6","José Holebas25","Kiko21","Abdoulaye Doucouré16","Nathaniel Chalobah14","Troy Deeney9","Gerard Deulofeu7","Roberto Pereyra37","Will Hughes19")
+final_2 <- avg_g(teamname_2)
+final_2
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
